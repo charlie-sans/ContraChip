@@ -1,0 +1,57 @@
+namespace contrachip;
+import __builtin.std;
+import "Chip.ct";
+
+// Offline oscillator diagnostics: no audio device needed, pure math.
+// For each wave at a given MIDI note: peak, DC mean, and max
+// sample-to-sample jump. Sine/triangle should show tiny jumps
+// (~0.07); naive square/saw/pulse show ~2.0 at their hard edges.
+Contract Program {
+    static fn Stats(wave: int, midi: int, duty: float) {
+        var f: float = Chip.MidiFreq(midi);
+        var sr: float = 48000.0;
+        var phase: float = 0.0;
+        var peak: float = 0.0;
+        var sum: float = 0.0;
+        var maxd: float = 0.0;
+        var prev: float = 0.0;
+        var first: bool = true;
+        var n: int = 4800;
+        var i: int = 0;
+        while (i < n) {
+            var s: float = Chip.Oscillate(wave, phase, duty);
+            phase = phase + f / sr;
+            while (phase >= 1.0) { phase = phase - 1.0; }
+            var a: float = s;
+            if (a < 0.0) { a = 0.0 - a; }
+            if (a > peak) { peak = a; }
+            sum = sum + s;
+            if (!first) {
+                var d: float = s - prev;
+                if (d < 0.0) { d = 0.0 - d; }
+                if (d > maxd) { maxd = d; }
+            }
+            first = false;
+            prev = s;
+            i = i + 1;
+        }
+        var mean: float = sum / Convert.ToFloat32I(n);
+        IO.Println(Chip.WaveName(wave) + " midi=" + Convert.ToString(midi) + " peak=" + Convert.ToStringF(peak) + " dc=" + Convert.ToStringF(mean) + " maxDelta=" + Convert.ToStringF(maxd));
+    }
+
+    static fn Main() {
+        IO.Println("-- C5 (72), pulse duty 0.25 --");
+        Stats(Wave.Sine, 72, 0.25);
+        Stats(Wave.Square, 72, 0.25);
+        Stats(Wave.Saw, 72, 0.25);
+        Stats(Wave.Triangle, 72, 0.25);
+        Stats(Wave.Noise, 72, 0.25);
+        Stats(Wave.Pulse, 72, 0.25);
+        IO.Println("-- C7 (96), pulse duty 0.25 --");
+        Stats(Wave.Sine, 96, 0.25);
+        Stats(Wave.Square, 96, 0.25);
+        Stats(Wave.Saw, 96, 0.25);
+        Stats(Wave.Triangle, 96, 0.25);
+        Stats(Wave.Pulse, 96, 0.25);
+    }
+}

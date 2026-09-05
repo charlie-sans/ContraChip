@@ -1,0 +1,26 @@
+{
+  "Name": "ContraChip",
+  "Type": "exe",
+  "Main": "src/main.ct",
+  "Namespace": "contrachip",
+  "Output": "bin",
+  "Version": "0.1.0",
+  "Author": null,
+  "Description": "A Contract application (audio demo)",
+  "License": null,
+  "Tags": [
+    "application"
+  ],
+  "NuGetDependencies": [
+    { "Name": "OwnAudioSharp", "Version": "4.0.6" }
+  ],
+  "Dependencies": null,
+
+  "Projects": null,
+  "Sources": null,
+
+  "ImportRoots": [
+    "../OwnAudioSharp.Contract/src",
+    "../ContractStdlib/src"
+  ]
+}

@@ -1,0 +1,107 @@
+namespace contrachip;
+import __builtin.std;
+import OwnAudioSharp;
+
+// ContraChip demo: 16-bit chip playing MIDI notes through the reusable
+// OwnAudioSharp.Chip engine (all rendering/streaming is C#-side).
+// All Play* calls are fire-and-forget — they pre-render and spawn
+// streaming threads, so the main thread stays responsive.
+Contract Program {
+    static fn ShowTheory() {
+        IO.Println("-- theory: MIDI -> Hz -> name --");
+        IO.Println("A4 (69) => " + Convert.ToStringF(Chip.MidiFreq(69)) + " Hz " + Chip.NoteName(69));
+        IO.Println("C4 (60) => " + Convert.ToStringF(Chip.MidiFreq(60)) + " Hz " + Chip.NoteName(60));
+        IO.Println("C5 (72) => " + Convert.ToStringF(Chip.MidiFreq(72)) + " Hz " + Chip.NoteName(72));
+    }
+
+    static fn TourWaves() {
+        IO.Println("-- tour: one waveform each, same note (C5) --");
+        IO.Println(Chip.WaveName(Wave.Sine) + " " + Chip.NoteName(72));
+        Chip.PlayNote(72, Wave.Sine, 0.3, 0.5);
+        IO.Println(Chip.WaveName(Wave.Square) + " " + Chip.NoteName(72));
+        Chip.PlayNote(72, Wave.Square, 0.3, 0.4);
+        IO.Println(Chip.WaveName(Wave.Saw) + " (raw Hz API: 523.25 Hz)");
+        Chip.PlayTone(523.25, Wave.Saw, 0.3, 0.4, 0.5);
+        IO.Println(Chip.WaveName(Wave.Triangle) + " " + Chip.NoteName(72));
+        Chip.PlayNote(72, Wave.Triangle, 0.3, 0.5);
+        IO.Println("noise (percussion-ish burst)");
+        Chip.PlayNote(72, Wave.Noise, 0.3, 0.3);
+        IO.Println("pulse 25% (skinny retro lead)");
+        Chip.PlayNoteDuty(72, Wave.Pulse, 0.3, 0.4, 0.25);
+    }
+
+    static fn PlayScale() {
+        IO.Println("-- melody: C major scale, pulse lead --");
+        var scale: int[] = [60, 62, 64, 65, 67, 69, 71, 72];
+        Chip.PlayMelody(scale, 0.14, Wave.Pulse, 0.45, 0.02);
+    }
+
+    static fn PlayChords() {
+        IO.Println("-- chords: C - F - G - C (square stabs) --");
+        var c: int[] = [60, 64, 67];
+        var f: int[] = [53, 57, 60];
+        var g: int[] = [55, 59, 62];
+        Chip.PlayChord(c, Wave.Square, 0.5, 0.35);
+        Chip.PlayChord(f, Wave.Square, 0.5, 0.35);
+        Chip.PlayChord(g, Wave.Square, 0.5, 0.35);
+        Chip.PlayChord(c, Wave.Square, 0.8, 0.4);
+    }
+
+    static fn PlayEffects() {
+        IO.Println("-- fx: laser slide --");
+        Chip.PlaySlide(80, 40, Wave.Saw, 0.3, 0.35);
+        Thread.Sleep(350);
+        IO.Println("-- coin slide --");
+        Chip.PlaySlide(60, 96, Wave.Square, 0.2, 0.3);
+        Thread.Sleep(250);
+        IO.Println("-- crushed lead --");
+        Chip.PlayNoteCrush(76, Wave.Saw, 0.35, 0.4, 0.5, 8);
+    }
+
+    static fn PlayMidiDemo() {
+        IO.Println("-- midi: assets/song.mid (engine loads it, square lead) --");
+        var played: bool = Chip.PlayMidiFile("assets/song.mid", Wave.Square, 0.4, 0.5);
+        IO.Println("  PlayMidiFile => " + Convert.ToStringB(played));
+        Thread.Sleep(2500);
+    }
+
+    static fn Main() {
+        IO.Println("== ContraChip: 16-bit chip x OwnaudioNET ==");
+
+        var ok: bool = OwnAudio.Initialize(false, 48000, 2, 2048);
+        if (!ok) {
+            IO.Println("no audio device, falling back to mock engine");
+            ok = OwnAudio.Initialize(true, 48000, 2, 512);
+        }
+        IO.Println("Initialize => " + Convert.ToStringB(ok));
+        if (!ok) { return; }
+        IO.Println("Rate=" + Convert.ToString(OwnAudio.SampleRate()) + " Ch=" + Convert.ToString(OwnAudio.Channels()) + " Buf=" + Convert.ToString(OwnAudio.BufferSize()));
+
+        OwnAudio.Start();
+
+        ShowTheory();
+
+        TourWaves();
+        Thread.Sleep(2000);
+
+        PlayScale();
+        Thread.Sleep(1500);
+
+        PlayChords();
+        Thread.Sleep(2500);
+
+        PlayEffects();
+        Thread.Sleep(1500);
+
+        PlayMidiDemo();
+
+        IO.Println("all notes dispatched, waiting for audio...");
+
+        Thread.Sleep(2000);
+
+        OwnAudio.Stop();
+        OwnAudio.Shutdown();
+        IO.Println("shutdown complete => initialized=" + Convert.ToStringB(OwnAudio.IsInitialized()));
+        IO.Println("done");
+    }
+}
